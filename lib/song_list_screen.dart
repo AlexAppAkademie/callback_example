@@ -25,12 +25,17 @@ class _SongListScreenState extends State<SongListScreen> {
 
   void _resetLikes() {
     setState(() {
-      for (var song in songs) {
+      for (Song song in songs) {
         song.liked = false;
       }
     });
   }
 
+  // Erklärung:
+  // Getter-Methode, die die Liste songs nach denen filtert,
+  // die geliked wurden und daraus eine neue temporäre Liste erstellt,
+  // nur um auf deren Länge (= die Anzahl geliketer Songs) zuzugreifen.
+  // Getter haben den Vorteil, dass man sie wie eine normale Variable benutzen kann
   int get _totalLikes => songs.where((song) => song.liked).length;
   // Alternative:
   // int _totalLikes() {
@@ -59,16 +64,14 @@ class _SongListScreenState extends State<SongListScreen> {
             child: Text("Alle Likes zurücksetzen"),
           ),
           Expanded(
-            child: ListView.builder(
-              itemCount: songs.length,
-              itemBuilder: (context, index) {
-                final song = songs[index];
+            child: ListView(
+              children: songs.map((song) {
                 return SongTile(
                   title: song.title,
                   liked: song.liked,
-                  onLikeChanged: () => _toggleLike(index),
+                  onLikeChanged: () => _toggleLike(songs.indexOf(song)),
                 );
-              },
+              }).toList(),
             ),
           ),
         ],
