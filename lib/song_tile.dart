@@ -1,39 +1,31 @@
 import "package:flutter/material.dart";
 
-class SongTile extends StatefulWidget {
+class SongTile extends StatelessWidget {
   final String title;
-  final Function(bool) onLikeChanged;
+  bool liked;
+  // da der Wert von liked jetzt nicht mehr in SongTile verändert wird,
+  // sondern in SongListScreen, und diese Änderung nur veranlasst werden muss,
+  // müssen wir den Wert nicht mehr übergeben und brauchen somit keine Function mehr
+  // wir können den Datentyp zu einem einfachen VoidCallback ändern
+  final VoidCallback onLikeChanged;
 
   SongTile({
     super.key,
     required this.title,
+    required this.liked,
     required this.onLikeChanged,
   });
 
   @override
-  State<SongTile> createState() => _SongTileState();
-}
-
-class _SongTileState extends State<SongTile> {
-  bool _liked = false;
-
-  void _toggleLike() {
-    setState(() {
-      _liked = !_liked;
-    });
-    widget.onLikeChanged(_liked);
-  }
-
-  @override
   Widget build(BuildContext context) {
     return ListTile(
-      title: Text(widget.title),
+      title: Text(title),
       trailing: IconButton(
         icon: Icon(
-          _liked ? Icons.favorite : Icons.favorite_border,
-          color: null,
+          liked ? Icons.favorite : Icons.favorite_border,
+          color: liked ? Colors.red : null,
         ),
-        onPressed: _toggleLike,
+        onPressed: onLikeChanged,
       ),
     );
   }

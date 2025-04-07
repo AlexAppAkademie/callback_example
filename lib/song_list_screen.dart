@@ -1,3 +1,4 @@
+import "package:callback_example/song.dart";
 import "package:callback_example/song_tile.dart";
 import "package:flutter/material.dart";
 
@@ -9,20 +10,36 @@ class SongListScreen extends StatefulWidget {
 }
 
 class _SongListScreenState extends State<SongListScreen> {
-  int _totalLikes = 0;
+  final List<Song> songs = [
+    Song("Dancehall Caballeros"),
+    Song("Schüttel deinen Speck"),
+    Song("Toxic"),
+    Song("Hot in Herre"),
+  ];
 
-  void _handleLike(bool liked) {
+  void _toggleLike(int index) {
     setState(() {
-      liked ? _totalLikes++ : _totalLikes--;
+      songs[index].liked = !songs[index].liked;
     });
   }
 
-  final List<String> songs = [
-    "Dancehall Caballeros",
-    "Schüttel deinen Speck",
-    "Toxic",
-    "Hot in Herre",
-  ];
+  void _resetLikes() {
+    setState(() {
+      for (var song in songs) {
+        song.liked = false;
+      }
+    });
+  }
+
+  int get _totalLikes => songs.where((song) => song.liked).length;
+  // Alternative:
+  // int _totalLikes() {
+  //   int totalLikes = 0;
+  //   for (Song song in songs) {
+  //     if (song.liked) totalLikes++;
+  //   }
+  //   return totalLikes;
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -37,20 +54,21 @@ class _SongListScreenState extends State<SongListScreen> {
               style: TextStyle(fontSize: 20),
             ),
           ),
+          ElevatedButton(
+            onPressed: _resetLikes,
+            child: Text("Alle Likes zurücksetzen"),
+          ),
           Expanded(
-            child: ListView(
-              children: songs.map((title) {
+            child: ListView.builder(
+              itemCount: songs.length,
+              itemBuilder: (context, index) {
+                final song = songs[index];
                 return SongTile(
-                  title: title,
-                  // Callback-Function:
-                  // eine Funktion, die als Parameter an ein anderes Widget übergeben wird
-                  // Die Eltern-Komponente (SongListScreen) gibt die Funktion _handleLike an die SongTiles weiter
-                  // Wenn in SongTile auf das Herz geklickt wird, ruft sie widget.onLikeChanged(_liked) auf
-                  // Dadurch wird der Eltern-Komponente signalisiert: "Ich wurde geliked oder entliked"
-                  // Das ist wichtig, damit Kind-Widgets ihre Aktionen „nach oben“ melden können
-                  onLikeChanged: _handleLike,
+                  title: song.title,
+                  liked: song.liked,
+                  onLikeChanged: () => _toggleLike(index),
                 );
-              }).toList(),
+              },
             ),
           ),
         ],
