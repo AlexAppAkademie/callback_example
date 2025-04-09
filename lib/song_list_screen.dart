@@ -21,6 +21,9 @@ class _SongListScreenState extends State<SongListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Hier holen wir uns die Instanz von LikeProvider, die wir in main.dart erstellt haben.
+    // Provider.of<LikeProvider>(context) sucht im Widget-Baum nach einem LikeProvider und gibt es zurück.
+    // Dies ermöglicht es uns, auf die Methoden von LikeProvider zuzugreifen.
     final likeProvider = Provider.of<LikeProvider>(context);
 
     return Scaffold(
@@ -35,14 +38,13 @@ class _SongListScreenState extends State<SongListScreen> {
             ),
           ),
           ElevatedButton(
-            onPressed: likeProvider.resetLikes,
+            onPressed: likeProvider.resetLikes, // ruft die Reset-Methode im Provider auf
             child: Text("Alle Likes zurücksetzen"),
           ),
           Expanded(
             child: ListView(
-              children: songs.map((song) {
-                return SongTile(song: song);
-              }).toList(),
+              // Jede SongTile bekommt nur das Song-Objekt (kein State/Callback nötig)
+              children: songs.map((song) => SongTile(song: song)).toList(),
             ),
           ),
         ],

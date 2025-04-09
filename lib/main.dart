@@ -4,6 +4,7 @@ import "package:flutter/material.dart";
 import "package:provider/provider.dart";
 
 void main() => runApp(
+      // Registriert LikeProvider als globale State-Quelle für die gesamte App
       ChangeNotifierProvider(
         create: (_) => LikeProvider(),
         child: App(),
