@@ -1,32 +1,33 @@
+import "package:callback_example/like_provider.dart";
+import "package:callback_example/song.dart";
 import "package:flutter/material.dart";
+import "package:provider/provider.dart";
 
 class SongTile extends StatelessWidget {
-  final String title;
-  bool liked;
-  // da der Wert von liked jetzt nicht mehr in SongTile verändert wird,
-  // sondern in SongListScreen, und diese Änderung nur veranlasst werden muss,
-  // müssen wir den Wert nicht mehr übergeben und brauchen somit keine Function mehr
-  // wir können den Datentyp zu einem einfachen VoidCallback ändern
-  final VoidCallback onLikeChanged;
+  final Song song;
 
   SongTile({
     super.key,
-    required this.title,
-    required this.liked,
-    required this.onLikeChanged,
+    required this.song,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(title),
-      trailing: IconButton(
-        icon: Icon(
-          liked ? Icons.favorite : Icons.favorite_border,
-          color: liked ? Colors.red : null,
-        ),
-        onPressed: onLikeChanged,
-      ),
+    return Consumer<LikeProvider>(
+      builder: (context, likeProvider, child) {
+        final bool isLiked = likeProvider.isLiked(song.title);
+
+        return ListTile(
+          title: Text(song.title),
+          trailing: IconButton(
+            icon: Icon(
+              isLiked ? Icons.favorite : Icons.favorite_border,
+              color: isLiked ? Colors.red : null,
+            ),
+            onPressed: () => likeProvider.toggleLike(song.title),
+          ),
+        );
+      },
     );
   }
 }

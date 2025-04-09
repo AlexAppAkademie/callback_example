@@ -1,6 +1,8 @@
+import "package:callback_example/like_provider.dart";
 import "package:callback_example/song.dart";
 import "package:callback_example/song_tile.dart";
 import "package:flutter/material.dart";
+import "package:provider/provider.dart";
 
 class SongListScreen extends StatefulWidget {
   const SongListScreen({super.key});
@@ -17,37 +19,10 @@ class _SongListScreenState extends State<SongListScreen> {
     Song("Hot in Herre"),
   ];
 
-  void _toggleLike(int index) {
-    setState(() {
-      songs[index].liked = !songs[index].liked;
-    });
-  }
-
-  void _resetLikes() {
-    setState(() {
-      for (Song song in songs) {
-        song.liked = false;
-      }
-    });
-  }
-
-  // Erklärung:
-  // Getter-Methode, die die Liste songs nach denen filtert,
-  // die geliked wurden und daraus eine neue temporäre Liste erstellt,
-  // nur um auf deren Länge (= die Anzahl geliketer Songs) zuzugreifen.
-  // Getter haben den Vorteil, dass man sie wie eine normale Variable benutzen kann
-  int get _totalLikes => songs.where((song) => song.liked).length;
-  // Alternative:
-  // int _totalLikes() {
-  //   int totalLikes = 0;
-  //   for (Song song in songs) {
-  //     if (song.liked) totalLikes++;
-  //   }
-  //   return totalLikes;
-  // }
-
   @override
   Widget build(BuildContext context) {
+    final likeProvider = Provider.of<LikeProvider>(context);
+
     return Scaffold(
       appBar: AppBar(title: Text("Songs & Likes")),
       body: Column(
@@ -55,22 +30,18 @@ class _SongListScreenState extends State<SongListScreen> {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
-              "Gesamt-Likes: $_totalLikes",
+              "Gesamt-Likes: ${likeProvider.totalLikes}",
               style: TextStyle(fontSize: 20),
             ),
           ),
           ElevatedButton(
-            onPressed: _resetLikes,
+            onPressed: likeProvider.resetLikes,
             child: Text("Alle Likes zurücksetzen"),
           ),
           Expanded(
             child: ListView(
               children: songs.map((song) {
-                return SongTile(
-                  title: song.title,
-                  liked: song.liked,
-                  onLikeChanged: () => _toggleLike(songs.indexOf(song)),
-                );
+                return SongTile(song: song);
               }).toList(),
             ),
           ),
