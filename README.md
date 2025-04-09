@@ -1,140 +1,171 @@
-# Song-Like-App als Beispiel für State Management mit setState und Callbacks
+# Song-Like-App – von `setState()` zu `Provider`
 
-## Übersicht
+## 🧭 Projektübersicht
 
-Dieses Beispiel demonstriert, wie man mit Flutter den State in einer einfachen "Song-Like-App" verwaltet. Zu Beginn werden die Like-Buttons für jeden Song lokal im Widget gespeichert. Im zweiten Schritt wird der State von den `SongTile`-Widgets in die Eltern-Komponente `SongListScreen` hochgehoben. Zudem wird ein Reset-Feature hinzugefügt, um alle Songs auf einmal zu entliken.
+Diese Beispiel-App zeigt Schritt für Schritt, wie man mit Flutter einen Like-Mechanismus für Songs umsetzt. Dabei wird die App in **drei Zuständen** aufgebaut, die verschiedene Ansätze zum **State Management** demonstrieren:
 
-## Zustand 1: Vor dem Reset-Feature
+- **Zustand 1:** Lokaler State mit `setState()`
+- **Zustand 2:** „Lifting State Up“ zur Eltern-Komponente
+- **Zustand 3:** Globaler State mit `Provider`
 
-In diesem ersten Zustand speichern die einzelnen `SongTile`-Widgets ihren eigenen Like-Status lokal. Wenn ein Benutzer auf das Herz-Icon klickt, wird der Like-Status nur für dieses einzelne Widget geändert. Die Gesamtzahl der Likes wird oben auf der Seite angezeigt, aber das Zurücksetzen aller Likes auf einmal ist nicht möglich.
+Ziel ist es, ein Verständnis für verschiedene State-Management-Konzepte und deren Stärken und Schwächen zu entwickeln.
 
-### Codebeispiel:
+---
 
+## 🧩 Zustand 1: Lokaler State mit `setState()`
+
+Jedes `SongTile`-Widget speichert für sich selbst, ob es geliked ist. Die Eltern-Komponente zählt die Likes über einen Callback hoch oder runter.
+
+### 📌 Codeauszug aus `SongTile`:
 ```dart
 class SongTile extends StatefulWidget {
   final String title;
   final Function(bool) onLikeChanged;
 
-  SongTile({
-    super.key,
-    required this.title,
-    required this.onLikeChanged,
-  });
-
-  @override
-  State<SongTile> createState() => _SongTileState();
+  ...
 }
 
 class _SongTileState extends State<SongTile> {
   bool _liked = false;
 
   void _toggleLike() {
-    setState(() {
-      _liked = !_liked;
-    });
-    widget.onLikeChanged(_liked);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(widget.title),
-      trailing: IconButton(
-        icon: Icon(
-          _liked ? Icons.favorite : Icons.favorite_border,
-          color: null,
-        ),
-        onPressed: _toggleLike,
-      ),
-    );
+    setState(() => _liked = !_liked);
+    widget.onLikeChanged(_liked); // ❌ Callback nach oben
   }
 }
 ```
 
-### Lernziele in diesem Zustand:
-- **State Management mit `setState()`**: Wiederholen, wie lokale Zustände innerhalb von Stateful Widgets verwaltet werden.
-- **Callback-Mechanismus**: Lernen, wie eine Eltern-Komponente durch einen Callback den Zustand von Kind-Komponenten überwachen und anpassen kann.
+### 🎯 Lernziele:
+- Funktionsweise von `setState()` verstehen
+- Verwendung von **Callbacks**, um vom Kind nach oben zu kommunizieren
+- Grenzen erkennen: Kein globaler Überblick, kein Reset möglich
 
-## Zustand 2: Nach dem Reset-Feature (Lifting State Up)
+---
 
-In diesem erweiterten Zustand wird der Like-Status nicht mehr lokal in den `SongTile`-Widgets gespeichert, sondern in der Eltern-Komponente `SongListScreen`. Dies ermöglicht die zentrale Verwaltung des Zustands für alle Songs und fügt eine neue Funktion hinzu, um alle Songs gleichzeitig zu entliken.
+## 🪜 Zustand 2: Lifting State Up zur Eltern-Komponente
 
-### Codebeispiel:
+Der Liked-Status wird **zentral** in `SongListScreen` gehalten. `SongTile` wird stateless und bekommt den Status sowie die Umschaltfunktion als Props.
 
+### 📌 Codeauszug:
 ```dart
+class Song {
+  String title;
+  bool liked;
+  Song(this.title, {this.liked = false});
+}
+
 class _SongListScreenState extends State<SongListScreen> {
-  final List<Song> songs = [
-    Song("Dancehall Caballeros"),
-    Song("Schüttel deinen Speck"),
-    Song("Toxic"),
-    Song("Hot in Herre"),
-  ];
+  List<Song> songs = [...];
 
   void _toggleLike(int index) {
-    setState(() {
-      songs[index].liked = !songs[index].liked;
-    });
+    setState(() => songs[index].liked = !songs[index].liked);
   }
 
   void _resetLikes() {
-    setState(() {
-      for (var song in songs) {
-        song.liked = false;
-      }
-    });
-  }
-
-  int get _totalLikes => songs.where((song) => song.liked).length;
-  // Alternative:
-  // int _totalLikes() {
-  //   int totalLikes = 0;
-  //   for (Song song in songs) {
-  //     if (song.liked) totalLikes++;
-  //   }
-  //   return totalLikes;
-  // }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Songs & Likes")),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              "Gesamt-Likes: $_totalLikes",
-              style: TextStyle(fontSize: 20),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: _resetLikes,
-            child: Text("Alle Likes zurücksetzen"),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: songs.length,
-              itemBuilder: (context, index) {
-                final song = songs[index];
-                return SongTile(
-                  title: song.title,
-                  liked: song.liked,
-                  onLikeChanged: () => _toggleLike(index),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
+    setState(() => songs.forEach((s) => s.liked = false));
   }
 }
 ```
 
-### Lernziele nach dem Reset-Feature:
-- **Lifting State Up**: Lernen, wie man den State von untergeordneten Widgets in eine Eltern-Komponente hochhebt, um den Zustand zentral zu verwalten.
-- **Erweiterte Callback-Nutzung**: Der Callback wird nur noch verwendet, um die Aktion „Like/Unlike“ vom Kind zur Eltern-Komponente zu melden, wodurch das Kind-Widget stateless wird.
+### 🎯 Lernziele:
+- **Lifting State Up**: Zustände dort verwalten, wo sie gemeinsam gebraucht werden
+- Zentrale Kontrolle über alle Likes ermöglicht „Unlike all“
+- Nachteil: Zustand bleibt auf diese Komponente beschränkt
 
-## Fazit
+---
 
-In diesem Beispiel wurde das einfache Prinzip von `setState()` zur Verwaltung von lokalem Zustand eingeführt und dann durch das Konzept des "Lifting State Up" erweitert. Dieses Vorgehen ermöglicht es, den Zustand zentral zu steuern und komplexere Features wie das Zurücksetzen aller Likes zu implementieren. Dieses Beispiel stellt eine Grundlage für die Diskussion über fortgeschrittene State-Management-Techniken, wie z. B. den Einsatz von `Provider` oder `Riverpod`, dar.
+## 🚀 Zustand 3: Globaler State mit `Provider`
+
+Der Zustand wird nun über `Provider` **global** verwaltet. Die `LikeProvider`-Klasse ist für die gesamte App verfügbar und speichert die Like-Zustände aller Songs.
+
+### 📌 Wichtige Konzepte:
+- `ChangeNotifier` zur Beobachtbarkeit
+- `Provider` zur Zustandsverteilung
+- `Consumer` zur gezielten Aktualisierung einzelner Widgets
+
+### 📌 Codeauszug aus `like_provider.dart`:
+```dart
+class LikeProvider extends ChangeNotifier {
+  final Map<String, bool> _likes = {};
+
+  bool isLiked(String title) => _likes[title] ?? false;
+
+  void toggleLike(String title) {
+    _likes[title] = !isLiked(title);
+    notifyListeners();
+  }
+
+  void resetLikes() {
+    _likes.clear();
+    notifyListeners();
+  }
+
+  int get totalLikes => _likes.values.where((liked) => liked).length;
+}
+```
+
+### 📌 Integration in `main.dart`:
+```dart
+void main() => runApp(
+  ChangeNotifierProvider(
+    create: (_) => LikeProvider(),
+    child: App(),
+  ),
+);
+```
+
+### 📌 Verwendung in der UI:
+```dart
+// song_list_screen.dart
+final likeProvider = Provider.of<LikeProvider>(context);
+Text("Gesamt-Likes: ${likeProvider.totalLikes}");
+ElevatedButton(onPressed: likeProvider.resetLikes, ...);
+
+// song_tile.dart
+Consumer<LikeProvider>(
+  builder: (context, likeProvider, child) {
+    final isLiked = likeProvider.isLiked(song.title);
+    return IconButton(
+      icon: Icon(...),
+      onPressed: () => likeProvider.toggleLike(song.title),
+    );
+  },
+);
+```
+
+### 🎯 Lernziele:
+- Einstieg in **reaktives, globales State Management** mit `Provider`
+- **Entkopplung** von UI und Logik
+- Verbesserte Testbarkeit und Wiederverwendbarkeit
+
+---
+
+## 📊 Vergleich der drei Zustände
+
+| Zustand                        | Verwaltung          | Reset-Funktion       | Wiederverwendbarkeit | Testbarkeit |
+|-------------------------------|---------------------|----------------------|----------------------|-------------|
+| 1. Lokal mit `setState()`     | im Kind-Widget      | nicht möglich        | niedrig              | schlecht    |
+| 2. Lifting State Up           | in Eltern-Komponente| möglich              | mittel               | okay        |
+| 3. Provider                   | global & entkoppelt | elegant möglich      | hoch                 | gut         |
+
+---
+
+## 💡 Weiterführende Ideen
+
+- Speicherung der Likes mit `SharedPreferences` oder `Firebase`
+- Benutzerverwaltung oder dynamisches Laden von Songs
+- Animationen bei Like/Unlike
+- Performance-Optimierung mit `Selector` oder `context.select`
+
+---
+
+## ✅ Fazit
+
+Diese Übung zeigt die Entwicklung vom einfachen lokalen State bis hin zum flexiblen, globalen State Management mit `Provider`.
+
+Studierende lernen dabei:
+
+- Wie Flutter mit `setState()` arbeitet
+- Wann und wie man **State hochtreibt** (*Lifting State Up*)
+- Warum **Callbacks** nützlich, aber unpraktisch bei wachsender Komplexität sind
+- Wie man mit `Provider` **sauberes, reaktives und wartbares** State Management aufbaut
