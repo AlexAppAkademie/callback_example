@@ -220,7 +220,7 @@ void main() {
 
 ### 📌 Initialisierung in der UI mit `Consumer`:
 ```dart
-class _SongListScreenState extends State<SongListScreen> {
+class SongListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
