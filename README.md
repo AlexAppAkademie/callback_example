@@ -140,6 +140,108 @@ Consumer<LikeProvider>(
 
 ---
 
+## 🧱 Erweiterung: Provider mit Repository (z. B. SharedPreferences oder Firebase)
+
+In dieser Variante wird der `Provider` um ein **Repository-Pattern** erweitert. Das Repository kümmert sich um das Speichern und Laden der Likes (z. B. in `SharedPreferences`, `Firebase`, etc.). Der Provider ruft diese Methoden auf und stellt sie der UI zur Verfügung.
+
+### 📌 Beispiel für ein Repository-Interface:
+```dart
+abstract class SongLikeRepository {
+  Future<bool> isLiked(String title);
+  Future<void> setLike(String title, bool liked);
+  Future<void> resetAll();
+  Future<List<String>> getLikedSongs();
+}
+```
+
+### 📌 LikeProvider mit Repository
+```dart
+class LikeProvider extends ChangeNotifier {
+  SongLikeRepository repo; // Referenz auf das Repo
+  bool loading = false; // um in der UI einen CircularProgressIndicator anzuzeigen
+  final Map<String, bool> _likes = {};
+
+  // Songs befinden sich jetzt nicht mehr in der UI, noch besser wäre es, sie wären ganz ausgelagert
+  final List<Song> songs = [
+    Song("Dancehall Caballeros"),
+    Song("Schüttel deinen Speck"),
+    Song("Toxic"),
+    Song("Hot in Herre"),
+  ];
+
+  // Konstruktor, der das Repo initialisiert und loadLikes aufruft,
+  // damit der Like-Status der Songs bei App-Start einmalig geladen wird
+  LikeProvider(this.repo) {
+    loadLikes(songs.map((song) => song.title).toList());
+  }
+
+  bool isLiked(String title) => _likes[title] ?? false;
+
+  Future<void> loadLikes(List<String> titles) async {
+    loading = true; // CircularProgressIndicator anzeigen
+    await Future.delayed(Duration(seconds: 2)); // künstliche Verzögerung, wäre sonst zu schnell
+    for (final title in titles) {
+      _likes[title] = await repo.isLiked(title);
+    }
+    loading = false; // CircularProgressIndicator nicht mehr anzeigen
+    notifyListeners();
+  }
+
+  Future<void> toggleLike(String title) async {
+    final bool newValue = !isLiked(title);
+    _likes[title] = newValue;
+    await repo.setLike(title, newValue);
+    notifyListeners();
+  }
+
+  Future<void> resetLikes() async {
+    _likes.clear();
+    await repo.resetAll();
+    notifyListeners();
+  }
+
+  int get totalLikes => _likes.values.where((isLiked) => isLiked).length;
+}
+```
+
+### 📌 Integration in `main.dart`:
+```dart
+final repo = SharedPrefsLikeRepository();
+
+void main() {
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => LikeProvider(repo),
+      child: App(),
+    ),
+  );
+}
+```
+
+### 📌 Initialisierung in der UI mit `Consumer`:
+```dart
+class _SongListScreenState extends State<SongListScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      // wir nutzen Consumer, um bei Änderungen nur den body statt das ganze Scaffold inkl. AppBar neuzuladen
+      body: Consumer<LikeProvider>(builder: (context, likeProvider, child) {
+        return likeProvider.loading
+            ? Center(child: CircularProgressIndicator())
+            : Column(...);
+      }),
+    );
+  }
+}
+```
+
+### 🎯 Erweiterte Lernziele:
+- Trennung von **persistenter Datenhaltung** und **UI-nahem State Management**
+- Einbindung des Repository-Patterns zur Vorbereitung auf Firebase o. Ä.
+- Gute Testbarkeit durch Austauschbarkeit des Repositories (z. B. mit Mocks)
+
+---
+
 ## 📊 Vergleich der drei Zustände
 
 | Zustand                        | Verwaltung          | Reset-Funktion       | Wiederverwendbarkeit | Testbarkeit |
@@ -147,12 +249,13 @@ Consumer<LikeProvider>(
 | 1. Lokal mit `setState()`     | im Kind-Widget      | nicht möglich        | niedrig              | schlecht    |
 | 2. Lifting State Up           | in Eltern-Komponente| möglich              | mittel               | okay        |
 | 3. Provider                   | global & entkoppelt | elegant möglich      | hoch                 | gut         |
+| 3+ Repository                 | Provider + Backend  | persistent & flexibel| sehr hoch            | sehr gut    |
 
 ---
 
 ## 💡 Weiterführende Ideen
 
-- Speicherung der Likes mit `SharedPreferences` oder `Firebase`
+- Speicherung der Likes mit `Firebase`
 - Benutzerverwaltung oder dynamisches Laden von Songs
 - Animationen bei Like/Unlike
 - Performance-Optimierung mit `Selector` oder `context.select`
@@ -161,11 +264,11 @@ Consumer<LikeProvider>(
 
 ## ✅ Fazit
 
-Diese Übung zeigt die Entwicklung vom einfachen lokalen State bis hin zum flexiblen, globalen State Management mit `Provider`.
+Diese Übung zeigt die Entwicklung vom einfachen lokalen State bis hin zum flexiblen, globalen State Management mit `Provider` und Repository.
 
 Studierende lernen dabei:
 
 - Wie Flutter mit `setState()` arbeitet
 - Wann und wie man **State hochtreibt** (*Lifting State Up*)
 - Warum **Callbacks** nützlich, aber unpraktisch bei wachsender Komplexität sind
-- Wie man mit `Provider` **sauberes, reaktives und wartbares** State Management aufbaut
+- Wie man mit `Provider` und einem **Repository** sauberes, reaktives und testbares State Management aufbaut
