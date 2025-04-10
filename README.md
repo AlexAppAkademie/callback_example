@@ -158,7 +158,7 @@ abstract class SongLikeRepository {
 ```dart
 class LikeProvider extends ChangeNotifier {
   SongLikeRepository repo; // Referenz auf das Repo
-  bool loading = false; // um in der UI einen CircularProgressIndicator anzuzeigen
+  bool loading = true; // um in der UI direkt einen CircularProgressIndicator anzuzeigen
   final Map<String, bool> _likes = {};
 
   // Songs befinden sich jetzt nicht mehr in der UI, noch besser wäre es, sie wären ganz ausgelagert
@@ -169,23 +169,24 @@ class LikeProvider extends ChangeNotifier {
     Song("Hot in Herre"),
   ];
 
-  // Konstruktor, der das Repo initialisiert und loadLikes aufruft,
-  // damit der Like-Status der Songs bei App-Start einmalig geladen wird
-  LikeProvider(this.repo) {
-    loadLikes(songs.map((song) => song.title).toList());
-  }
+  // Konstruktor, der das Repo initialisiert
+  LikeProvider(this.repo);
 
-  bool isLiked(String title) => _likes[title] ?? false;
-
-  Future<void> loadLikes(List<String> titles) async {
-    loading = true; // CircularProgressIndicator anzeigen
+  Future<void> initialize() async {
     await Future.delayed(Duration(seconds: 2)); // künstliche Verzögerung, wäre sonst zu schnell
-    for (final title in titles) {
-      _likes[title] = await repo.isLiked(title);
-    }
+    await loadLikes();
     loading = false; // CircularProgressIndicator nicht mehr anzeigen
     notifyListeners();
   }
+
+  Future<void> loadLikes() async {
+    // für jeden Titel den Like-Status aus dem Repo holen
+    for (Song song in songs) {
+      _likes[song.title] = await repo.isLiked(song.title);
+    }
+  }
+
+  bool isLiked(String title) => _likes[title] ?? false;
 
   Future<void> toggleLike(String title) async {
     final bool newValue = !isLiked(title);
@@ -206,12 +207,20 @@ class LikeProvider extends ChangeNotifier {
 
 ### 📌 Integration in `main.dart`:
 ```dart
-final repo = SharedPrefsLikeRepository();
-
 void main() {
+  final repo = SharedPrefsLikeRepository();
   runApp(
+    // Registriert LikeProvider als globale State-Quelle für die gesamte App
     ChangeNotifierProvider(
-      create: (_) => LikeProvider(repo),
+      create: (context) {
+        final LikeProvider likeProvider = LikeProvider(repo);
+        //    Der Aufruf hier ist "fire-and-forget" (wir warten nicht mit `await` darauf),
+        //    weil `create` synchron sein muss. Der Provider selbst kümmert sich
+        //    intern darum, seinen Ladezustand (`loading`) zu verwalten und die
+        //    UI via `notifyListeners()` zu informieren.
+        likeProvider.initialize();
+        return likeProvider; // Die erstellte (aber noch ladende) Provider-Instanz zurückgeben.
+      },
       child: App(),
     ),
   );
