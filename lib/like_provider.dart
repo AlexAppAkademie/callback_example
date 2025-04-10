@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 // LikeProvider verwaltet alle Like-Zustände global und erbt von ChangeNotifier, um Änderungen signalisieren zu können.
 class LikeProvider extends ChangeNotifier {
   SongLikeRepository repo; // Referenz auf das Repo
-  bool loading = false; // um in der UI einen CircularProgressIndicator anzuzeigen
+  bool loading = true; // um in der UI direkt einen CircularProgressIndicator anzuzeigen
 
   // Songs befinden sich jetzt nicht mehr in der UI, noch besser wäre es, sie wären ganz ausgelagert
   final List<Song> songs = [
@@ -15,23 +15,23 @@ class LikeProvider extends ChangeNotifier {
     Song("Hot in Herre"),
   ];
 
-  // Konstruktor, der das Repo initialisiert und loadLikes aufruft,
-  // damit der Like-Status der Songs bei App-Start einmalig geladen wird
-  LikeProvider(this.repo) {
-    loadLikes(songs.map((song) => song.title).toList());
-  }
-
   final Map<String, bool> _likes = {}; // Map speichert Like-Status pro Song-Titel
 
-  Future<void> loadLikes(List<String> titles) async {
-    loading = true; // CircularProgressIndicator anzeigen
+  // Konstruktor, der das Repo initialisiert
+  LikeProvider(this.repo);
+
+  Future<void> initialize() async {
     await Future.delayed(Duration(seconds: 2)); // künstliche Verzögerung, wäre sonst zu schnell
-    // für jeden Titel den Like-Status aus dem Repo holen
-    for (String title in titles) {
-      _likes[title] = await repo.isLiked(title);
-    }
+    await loadLikes();
     loading = false; // CircularProgressIndicator nicht mehr anzeigen
     notifyListeners();
+  }
+
+  Future<void> loadLikes() async {
+    // für jeden Titel den Like-Status aus dem Repo holen
+    for (Song song in songs) {
+      _likes[song.title] = await repo.isLiked(song.title);
+    }
   }
 
   // Gibt zurück, ob ein Song geliked ist - falls der Like-Status des Songs noch nicht per Klick auf das Herz-Icon verändert wurde,
